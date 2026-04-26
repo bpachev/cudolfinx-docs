@@ -1,0 +1,596 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cudolfinx.assemble &mdash; cuDOLFINx 0.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=82662543"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            cuDOLFINx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">cuDOLFINx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cudolfinx.assemble</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cudolfinx.assemble</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2024-2026 Benjamin Pachev</span>
+<span class="c1">#</span>
+<span class="c1"># This file is part of cuDOLFINX</span>
+<span class="c1">#</span>
+<span class="c1"># SPDX-License-Identifier:    LGPL-3.0-or-later</span>
+<span class="sd">&quot;&quot;&quot;GPU-accelerated assembly routines.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">petsc4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">PETSc</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">cpp</span> <span class="k">as</span> <span class="n">_cucpp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx.bcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">CUDADirichletBC</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cuda_context</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx.form</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlockCUDAForm</span><span class="p">,</span> <span class="n">CUDAForm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx.la</span><span class="w"> </span><span class="kn">import</span> <span class="n">CUDAMatrix</span><span class="p">,</span> <span class="n">CUDAVector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx.fem.bcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">DirichletBC</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx.fem.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">Form</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx.fem.function</span><span class="w"> </span><span class="kn">import</span> <span class="n">Function</span><span class="p">,</span> <span class="n">FunctionSpace</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="s2">&quot;CUDAAssembler&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;create_petsc_cuda_vector&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<div class="viewcode-block" id="create_petsc_cuda_vector">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.create_petsc_cuda_vector">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_petsc_cuda_vector</span><span class="p">(</span><span class="n">L</span><span class="p">:</span> <span class="n">Form</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create PETSc Vector on device.&quot;&quot;&quot;</span>
+    <span class="n">index_map</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dofmap</span><span class="o">.</span><span class="n">index_map</span>
+    <span class="n">bs</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dofmap</span><span class="o">.</span><span class="n">index_map_bs</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_map</span><span class="o">.</span><span class="n">size_local</span> <span class="o">*</span> <span class="n">bs</span><span class="p">,</span> <span class="n">index_map</span><span class="o">.</span><span class="n">size_global</span> <span class="o">*</span> <span class="n">bs</span><span class="p">)</span>
+    <span class="c1"># we need to provide at least the local CPU array</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">()</span><span class="o">.</span><span class="n">createCUDAWithArrays</span><span class="p">(</span><span class="n">cpuarray</span><span class="o">=</span><span class="n">arr</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">bsize</span><span class="o">=</span><span class="n">bs</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">index_map</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CUDAAssembler</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for assembly on the GPU.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the assembler.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span> <span class="o">=</span> <span class="n">get_cuda_context</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAAssembler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tmpdir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CUDAAssembler.assemble_matrix">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.assemble_matrix">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assemble_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">a</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">,</span>
+        <span class="n">mat</span><span class="p">:</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAMatrix</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DirichletBC</span><span class="p">]</span> <span class="o">|</span> <span class="n">CUDADirichletBC</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">[],</span>
+        <span class="n">diagonal</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">constants</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">coeffs</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">zero</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble bilinear form into a matrix on the GPU.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            a: The bilinear form to assemble.</span>
+<span class="sd">            mat: Matrix in which to store assembled values.</span>
+<span class="sd">            bcs: Boundary conditions that affect the assembled matrix.</span>
+<span class="sd">                Degrees-of-freedom constrained by a boundary condition will</span>
+<span class="sd">                have their rows/columns zeroed and the value ``diagonal``</span>
+<span class="sd">                set on on the matrix diagonal.</span>
+<span class="sd">            diagonal: Value to set on the diagonal.</span>
+<span class="sd">            constants: Constants that appear in the form. If not provided,</span>
+<span class="sd">                any required coefficients will be computed.</span>
+<span class="sd">            coeffs: Optional list of form coefficients to repack.</span>
+<span class="sd">                If not specified, all will be repacked.</span>
+<span class="sd">                If an empty list is passed, no repacking will be performed.</span>
+<span class="sd">            zero: Whether to zero the matrix prior to assembly</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Matrix representation of the bilinear form ``a``.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The returned matrix is not finalised, i.e. ghost values are not</span>
+<span class="sd">            accumulated.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expected CUDAForm, got &#39;{type(a)}&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mat</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_matrix</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">bc_collection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pack_bcs</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">is</span> <span class="n">CUDADirichletBC</span><span class="p">:</span>
+            <span class="n">bc_collection</span> <span class="o">=</span> <span class="n">bcs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Expected either a list of DirichletBC&#39;s or a CUDADirichletBC, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+        <span class="n">_bc0</span> <span class="o">=</span> <span class="n">bc_collection</span><span class="o">.</span><span class="n">_get_cpp_bcs</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dolfinx_form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">_bc1</span> <span class="o">=</span> <span class="n">bc_collection</span><span class="o">.</span><span class="n">_get_cpp_bcs</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dolfinx_form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># For now always re-copy to device on assembly</span>
+        <span class="c1"># This assumes something has changed on the host</span>
+        <span class="n">a</span><span class="o">.</span><span class="n">to_device</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">zero</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">zero_matrix_entries</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">mat</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+        <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">assemble_matrix_on_device</span><span class="p">(</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">,</span>
+           <span class="n">a</span><span class="o">.</span><span class="n">cuda_mesh</span><span class="p">,</span> <span class="n">mat</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bc0</span><span class="p">,</span> <span class="n">_bc1</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mat</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.assemble_matrix_block">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.assemble_matrix_block">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assemble_matrix_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">a</span><span class="p">:</span> <span class="n">BlockCUDAForm</span><span class="p">,</span>
+      <span class="n">mat</span><span class="p">:</span> <span class="n">CUDAMatrix</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">coeffs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">constants</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">zero</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble block form into a matrix on the GPU.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mat</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_matrix_block</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">zero</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">zero_matrix_entries</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">mat</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+
+        <span class="n">_bc0</span><span class="p">,</span> <span class="n">_bc1</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">make_block_bc</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">forms</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">form</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+                <span class="n">_coeffs</span> <span class="o">=</span> <span class="n">coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="k">if</span> <span class="n">coeffs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">_constants</span> <span class="o">=</span> <span class="n">constants</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="k">if</span> <span class="n">constants</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">form</span><span class="o">.</span><span class="n">to_device</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">)</span>
+                <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">assemble_matrix_on_device</span><span class="p">(</span>
+                  <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">,</span>
+                  <span class="n">form</span><span class="o">.</span><span class="n">cuda_mesh</span><span class="p">,</span> <span class="n">mat</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bc0</span><span class="p">,</span> <span class="n">_bc1</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mat</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.assemble_vector">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.assemble_vector">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assemble_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">,</span>
+      <span class="n">vec</span><span class="p">:</span> <span class="n">CUDAVector</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">constants</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zero</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble linear form into vector on GPU.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            b: the linear form to use for assembly</span>
+<span class="sd">            vec: the vector to assemble into. Created if it doesn&#39;t exist</span>
+<span class="sd">            constants: Form constants</span>
+<span class="sd">            coeffs: Optional list of form coefficients to repack.</span>
+<span class="sd">                If not specified, all will be repacked.</span>
+<span class="sd">                If an empty list is passed, no repacking will be performed.</span>
+<span class="sd">            zero: Whether to zero vector entries before assembly (defaults to true)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected CUDAForm, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vector</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="c1"># For now always re-copy to device on assembly</span>
+        <span class="c1"># This assumes something has changed on the host</span>
+        <span class="n">b</span><span class="o">.</span><span class="n">to_device</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">zero</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">zero_vector_entries</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">vec</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+
+        <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">assemble_vector_on_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">,</span>
+          <span class="n">b</span><span class="o">.</span><span class="n">cuda_mesh</span><span class="p">,</span> <span class="n">vec</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vec</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.assemble_vector_block">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.assemble_vector_block">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assemble_vector_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">BlockCUDAForm</span><span class="p">,</span>
+      <span class="n">vec</span><span class="p">:</span> <span class="n">CUDAVector</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">constants</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zero</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble block linear form into vector on GPU.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            b: the block linear form to use for assembly</span>
+<span class="sd">            vec: the vector to assemble into. Created if not provided</span>
+<span class="sd">            constants: List of constants for each sub form</span>
+<span class="sd">            coeffs: Optional list of form coefficients to repack.</span>
+<span class="sd">                If not specified, all will be repacked.</span>
+<span class="sd">               If an empty list is passed, no repacking will be performed.</span>
+<span class="sd">            zero: Whether to zero vector entries before assembly (defaults to true)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">BlockCUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected BlockCUDAForm, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vector_block</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+        <span class="n">num_forms</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">forms</span><span class="p">)</span>
+        <span class="n">_constants</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span><span class="o">*</span><span class="n">num_forms</span> <span class="k">if</span> <span class="n">constants</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">constants</span>
+        <span class="n">_coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span><span class="o">*</span><span class="n">num_forms</span> <span class="k">if</span> <span class="n">coeffs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">coeffs</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_constants</span><span class="p">)</span> <span class="o">!=</span> <span class="n">num_forms</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Expected constants to be None or a list of length: &#39;</span><span class="si">{</span><span class="n">num_forms</span><span class="si">}</span><span class="s2">&#39;,&quot;</span>
+              <span class="sa">f</span><span class="s2">&quot; got &#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">_constants</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; instead!&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_coeffs</span><span class="p">)</span> <span class="o">!=</span> <span class="n">num_forms</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Expected coeffs to be None or a list of length: &#39;</span><span class="si">{</span><span class="n">num_forms</span><span class="si">}</span><span class="s2">&#39;,&quot;</span>
+              <span class="sa">f</span><span class="s2">&quot; got &#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">_coeffs</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; instead!&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">zero</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">zero_vector_entries</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">vec</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">form_constants</span><span class="p">,</span> <span class="n">form_coeffs</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">forms</span><span class="p">,</span> <span class="n">_constants</span><span class="p">,</span> <span class="n">_coeffs</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assemble_vector</span><span class="p">(</span>
+                <span class="n">form</span><span class="p">,</span>
+                <span class="n">vec</span><span class="o">=</span><span class="n">vec</span><span class="p">,</span>
+                <span class="n">constants</span><span class="o">=</span><span class="n">form_constants</span><span class="p">,</span>
+                <span class="n">coeffs</span><span class="o">=</span><span class="n">form_coeffs</span><span class="p">,</span>
+                <span class="n">zero</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.assemble_scalar">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.assemble_scalar">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assemble_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">,</span>
+      <span class="n">constants</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble scalar integral on GPU.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            b: the functional to use for assembly</span>
+<span class="sd">            constants: Form constants</span>
+<span class="sd">            coeffs: Optional list of form coefficients to repack.</span>
+<span class="sd">                If not specified, all will be repacked.</span>
+<span class="sd">                If an empty list is passed, no repacking will be performed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected CUDAForm, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># For now always re-copy to device on assembly</span>
+        <span class="c1"># This assumes something has changed on the host</span>
+        <span class="n">b</span><span class="o">.</span><span class="n">to_device</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">)</span>
+
+        <span class="k">return</span>  <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">assemble_scalar_on_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">,</span>
+          <span class="n">b</span><span class="o">.</span><span class="n">cuda_mesh</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.create_matrix">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.create_matrix">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CUDAMatrix</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a CUDAMatrix from a given form.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected CUDAForm, got type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">petsc_mat</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">petsc</span><span class="o">.</span><span class="n">create_cuda_matrix</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dolfinx_form</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CUDAMatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">petsc_mat</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.create_matrix_block">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.create_matrix_block">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_matrix_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="n">BlockCUDAForm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CUDAMatrix</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a block matrix from a block form.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">BlockCUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected BlockCUDAForm, got type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">_cpp_forms</span> <span class="o">=</span> <span class="p">[[</span><span class="n">cuda_form</span><span class="o">.</span><span class="n">cuda_form</span> <span class="k">for</span> <span class="n">cuda_form</span> <span class="ow">in</span> <span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">forms</span><span class="p">]</span>
+        <span class="n">petsc_mat</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">petsc</span><span class="o">.</span><span class="n">create_cuda_matrix_block</span><span class="p">(</span><span class="n">_cpp_forms</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CUDAMatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">petsc_mat</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="CUDAAssembler.create_vector">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.create_vector">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CUDAVector</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a CUDAVector from a given form.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected CUDAForm, got type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">petsc_vec</span> <span class="o">=</span> <span class="n">create_petsc_cuda_vector</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">dolfinx_form</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CUDAVector</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">petsc_vec</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.create_vector_block">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.create_vector_block">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_vector_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">BlockCUDAForm</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CUDAVector</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a CUDAVector from a given form.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">BlockCUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected BlockCUDAForm, got type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;)&quot;</span><span class="p">)</span>
+
+        <span class="n">petsc_vec</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">()</span><span class="o">.</span><span class="n">createCUDAWithArrays</span><span class="p">(</span>
+            <span class="n">cpuarray</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">local_size</span><span class="p">),</span>
+            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">local_size</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">global_size</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">CUDAVector</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">petsc_vec</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.pack_bcs">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.pack_bcs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pack_bcs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DirichletBC</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">CUDADirichletBC</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pack boundary conditions into a single object for use in assembly.</span>
+
+<span class="sd">        The returned object is of type CUDADirichletBC and can be used in place of a list of</span>
+<span class="sd">        regular DirichletBCs. This is more efficient when performing multiple operations</span>
+<span class="sd">        with the same list of boundary conditions, or when</span>
+<span class="sd">        boundary condition values need to change over time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">CUDADirichletBC</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">bcs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.pack_coefficients">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.pack_coefficients">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pack_coefficients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="n">CUDAForm</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Function</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pack coefficients on device.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">CUDAForm</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected CUDAForm, got type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">coefficients</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># perform a repacking with only the indicated coefficients</span>
+            <span class="n">_coefficients</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">_cpp_object</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">coefficients</span><span class="p">]</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">,</span> <span class="n">_coefficients</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.apply_lifting">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.apply_lifting">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_lifting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">CUDAVector</span><span class="p">,</span>
+      <span class="n">a</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CUDAForm</span><span class="p">],</span>
+      <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">DirichletBC</span><span class="p">]</span> <span class="o">|</span> <span class="n">CUDADirichletBC</span><span class="p">],</span>
+      <span class="n">x0</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CUDAVector</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+      <span class="n">coeffs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Function</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;GPU equivalent of apply_lifting.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">           b: CUDAVector to modify</span>
+<span class="sd">           a: list of forms to lift</span>
+<span class="sd">           bcs: list of boundary condition lists</span>
+<span class="sd">           x0: optional list of shift vectors for lifting</span>
+<span class="sd">           scale: scale of lifting</span>
+<span class="sd">           coeffs: coefficients to (re-)pack</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bcs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Lengths of forms and bcs must match!&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">x0</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Lengths of forms and x0 must match!&quot;</span><span class="p">)</span>
+
+        <span class="n">_x0</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">_cpp_object</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">x0</span><span class="p">]</span>
+        <span class="n">bc_collections</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">bc_collection</span> <span class="ow">in</span> <span class="n">bcs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bc_collection</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">bc_collections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pack_bcs</span><span class="p">(</span><span class="n">bc_collection</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">bc_collection</span><span class="p">)</span> <span class="ow">is</span> <span class="n">CUDADirichletBC</span><span class="p">:</span>
+                <span class="n">bc_collections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bc_collection</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                  <span class="sa">f</span><span class="s2">&quot;Expected either a list of DirichletBC&#39;s or a CUDADirichletBC,&quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot; got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">bc_collection</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">coeffs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">coeffs</span><span class="p">):</span>
+            <span class="n">coeffs</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">a</span><span class="p">]</span>
+
+        <span class="n">cuda_forms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cuda_mesh</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">_bcs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">bc_collection</span><span class="p">,</span> <span class="n">form_coeffs</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">bc_collections</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">form_coeffs</span><span class="p">)</span>
+            <span class="n">cuda_forms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cuda_mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">cuda_mesh</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cuda_mesh</span>
+            <span class="n">_bcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bc_collection</span><span class="o">.</span><span class="n">_get_cpp_bcs</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">apply_lifting_on_device</span><span class="p">(</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+          <span class="n">cuda_forms</span><span class="p">,</span> <span class="n">cuda_mesh</span><span class="p">,</span>
+          <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bcs</span><span class="p">,</span> <span class="n">_x0</span><span class="p">,</span> <span class="n">scale</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.apply_lifting_block">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.apply_lifting_block">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_lifting_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">CUDAVector</span><span class="p">,</span>
+      <span class="n">a</span><span class="p">:</span> <span class="n">BlockCUDAForm</span><span class="p">,</span>
+      <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DirichletBC</span><span class="p">]</span> <span class="o">|</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">,</span>
+      <span class="n">x0</span><span class="p">:</span> <span class="n">CUDAVector</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+      <span class="n">set_bcs</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply lifting with a single block form.&quot;&quot;&quot;</span>
+        <span class="n">_x0</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x0</span><span class="o">.</span><span class="n">_cpp_object</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">block_bc</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">make_block_bc</span><span class="p">(</span><span class="n">bcs</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDADirichletBC_float32</span><span class="p">,</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDADirichletBC_float64</span><span class="p">):</span>
+            <span class="n">block_bc</span> <span class="o">=</span> <span class="n">bcs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Expected either a list of DirichletBCs or&quot;</span>
+              <span class="sa">f</span><span class="s2">&quot; a _cpp.fem_CUDADirichletBC_float64/32, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">cuda_mesh</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">forms</span><span class="p">:</span>
+            <span class="n">_bcs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">_x0_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">_cuda_forms</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">row</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pack_coefficients</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">cuda_mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">cuda_mesh</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cuda_mesh</span>
+                <span class="n">_cuda_forms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">cuda_form</span><span class="p">)</span>
+                <span class="n">_bcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block_bc</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">_x0_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_x0</span><span class="p">)</span>
+
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">apply_lifting_on_device</span><span class="p">(</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+              <span class="n">_cuda_forms</span><span class="p">,</span> <span class="n">cuda_mesh</span><span class="p">,</span>
+              <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bcs</span><span class="p">,</span> <span class="n">_x0_list</span><span class="p">,</span> <span class="n">alpha</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">set_bc_on_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+                    <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">block_bc</span><span class="p">,</span> <span class="n">_x0</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">set_bc_on_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+                    <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">block_bc</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CUDAAssembler.set_bc">
+<a class="viewcode-back" href="../../generated/cudolfinx.assemble.html#cudolfinx.assemble.CUDAAssembler.set_bc">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+      <span class="n">b</span><span class="p">:</span> <span class="n">CUDAVector</span><span class="p">,</span>
+      <span class="n">bcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DirichletBC</span><span class="p">]</span> <span class="o">|</span> <span class="n">CUDADirichletBC</span><span class="p">,</span>
+      <span class="n">V</span><span class="p">:</span> <span class="n">FunctionSpace</span><span class="p">,</span>
+      <span class="n">x0</span><span class="p">:</span> <span class="n">CUDAVector</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+      <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set boundary conditions on device.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">         b: vector to modify</span>
+<span class="sd">         bcs: collection of bcs</span>
+<span class="sd">         V: FunctionSpace to which bcs apply</span>
+<span class="sd">         x0: optional shift vector</span>
+<span class="sd">         scale: scaling factor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">bc_collection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pack_bcs</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span> <span class="ow">is</span> <span class="n">CUDADirichletBC</span><span class="p">:</span>
+            <span class="n">bc_collection</span> <span class="o">=</span> <span class="n">bcs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Expected either a list of DirichletBC&#39;s or a CUDADirichletBC, got &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">bcs</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="s1">&#39;_cpp_object&#39;</span><span class="p">):</span>
+            <span class="n">_cppV</span> <span class="o">=</span> <span class="n">V</span><span class="o">.</span><span class="n">_cpp_object</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_cppV</span> <span class="o">=</span> <span class="n">V</span>
+        <span class="n">_bcs</span> <span class="o">=</span> <span class="n">bc_collection</span><span class="o">.</span><span class="n">_get_cpp_bcs</span><span class="p">(</span><span class="n">_cppV</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">set_bc_on_device</span><span class="p">(</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+              <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bcs</span><span class="p">,</span> <span class="n">scale</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">set_bc_on_device</span><span class="p">(</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span>
+              <span class="n">b</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">_bcs</span><span class="p">,</span> <span class="n">x0</span><span class="o">.</span><span class="n">_cpp_object</span><span class="p">,</span> <span class="n">scale</span>
+            <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Benjamin Pachev, James Trotter.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

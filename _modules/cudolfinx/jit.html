@@ -1,0 +1,223 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cudolfinx.jit &mdash; cuDOLFINx 0.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=82662543"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            cuDOLFINx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">cuDOLFINx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cudolfinx.jit</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cudolfinx.jit</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2026 Benjamin Pachev</span>
+<span class="c1">#</span>
+<span class="c1"># This file is part of cuDOLFINX</span>
+<span class="c1">#</span>
+<span class="c1"># SPDX-License-Identifier:    LGPL-3.0-or-later</span>
+
+<span class="sd">&quot;&quot;&quot;Routines for manipulating generated FFCX code.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pathlib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">fem</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;get_tabulate_tensor_sources&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_wrapped_tabulate_tensors&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<div class="viewcode-block" id="get_tabulate_tensor_sources">
+<a class="viewcode-back" href="../../generated/cudolfinx.jit.html#cudolfinx.jit.get_tabulate_tensor_sources">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_tabulate_tensor_sources</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="n">fem</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a compiled fem.Form, extract the C source code of the tabulate tensors.&quot;&quot;&quot;</span>
+    <span class="n">module_file</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span>
+    <span class="n">source_filename</span> <span class="o">=</span> <span class="n">module_file</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.c&quot;</span>
+    <span class="n">source_file</span> <span class="o">=</span> <span class="n">module_file</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">source_filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">source_file</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s2">&quot;Could not find generated ffcx source file &#39;</span><span class="si">{source_file}</span><span class="s2">&#39;!&quot;</span><span class="p">)</span>
+
+    <span class="n">tabulate_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">parsing_tabulate</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">parsing_header</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">bracket_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">source_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;tabulate_tensor_integral&quot;</span> <span class="ow">in</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;void&quot;</span><span class="p">):</span>
+                <span class="n">parsing_tabulate</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">parsing_header</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">func_name</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">tabulate_id</span> <span class="o">=</span> <span class="n">func_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;tabulate_tensor_integral_&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">tabulate_body</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">elif</span> <span class="n">parsing_header</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">):</span>
+                    <span class="n">parsing_header</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">bracket_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">parsing_tabulate</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">):</span>
+                    <span class="n">bracket_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">):</span>
+                    <span class="n">bracket_count</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">bracket_count</span><span class="p">:</span>
+                    <span class="n">tabulate_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tabulate_id</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tabulate_body</span><span class="p">)))</span>
+                    <span class="n">parsing_tabulate</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">tabulate_body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;form_integrals_form&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;{&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                    <span class="n">arr</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">ordered_integral_ids</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">part</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&amp;integral_&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">arr</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+                    <span class="p">]</span>
+
+    <span class="c1"># map ids to order of appearance in tensor list</span>
+    <span class="n">id_order</span> <span class="o">=</span> <span class="p">{</span><span class="n">tabulate</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tabulate</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tabulate_tensors</span><span class="p">)}</span>
+    <span class="n">integral_tensor_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">id_order</span><span class="p">[</span><span class="n">integral_id</span><span class="p">]</span> <span class="k">for</span> <span class="n">integral_id</span> <span class="ow">in</span> <span class="n">ordered_integral_ids</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">tabulate_tensors</span><span class="p">,</span> <span class="n">integral_tensor_indices</span></div>
+
+
+<span class="n">cuda_tabulate_tensor_header</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    #define alignas(x)</span>
+<span class="s2">    #define restrict __restrict__</span>
+
+<span class="s2">    typedef unsigned char uint8_t;</span>
+<span class="s2">    typedef unsigned int uint32_t;</span>
+<span class="s2">    typedef double ufc_scalar_t;</span>
+
+<span class="s2">    extern &quot;C&quot; __global__</span>
+<span class="s2">    void tabulate_tensor_</span><span class="si">{factory_name}</span><span class="s2">(</span><span class="si">{scalar_type}</span><span class="s2">* restrict A,</span>
+<span class="s2">                                        const </span><span class="si">{scalar_type}</span><span class="s2">* restrict w,</span>
+<span class="s2">                                        const </span><span class="si">{scalar_type}</span><span class="s2">* restrict c,</span>
+<span class="s2">                                        const </span><span class="si">{geom_type}</span><span class="s2">* restrict coordinate_dofs,</span>
+<span class="s2">                                        const int* restrict entity_local_index,</span>
+<span class="s2">                                        const uint8_t* restrict quadrature_permutation</span>
+<span class="s2">                                        )</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_dtype_to_str</span><span class="p">(</span><span class="n">dtype</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert numpy dtype to named C type.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;float&quot;</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;double&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported dtype: &#39;</span><span class="si">{</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_wrapped_tabulate_tensors">
+<a class="viewcode-back" href="../../generated/cudolfinx.jit.html#cudolfinx.jit.get_wrapped_tabulate_tensors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_wrapped_tabulate_tensors</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="n">fem</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a fem.Form, wrap the tabulate tensors for use on a GPU.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">backend</span> <span class="o">!=</span> <span class="s2">&quot;cuda&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Backend &#39;</span><span class="si">{</span><span class="n">backend</span><span class="si">}</span><span class="s2">&#39; not yet supported.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># for now assume same type for form and mesh</span>
+    <span class="c1"># this is typically the default</span>
+    <span class="n">geom_type</span> <span class="o">=</span> <span class="n">scalar_type</span> <span class="o">=</span> <span class="n">_convert_dtype_to_str</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">sources</span><span class="p">,</span> <span class="n">integral_tensor_indices</span> <span class="o">=</span> <span class="n">get_tabulate_tensor_sources</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">body</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="n">factory_name</span> <span class="o">=</span> <span class="s2">&quot;integral_&quot;</span> <span class="o">+</span> <span class="nb">id</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;tabulate_tensor_&quot;</span> <span class="o">+</span> <span class="n">factory_name</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">cuda_tabulate_tensor_header</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">scalar_type</span><span class="o">=</span><span class="n">scalar_type</span><span class="p">,</span>
+                <span class="n">geom_type</span><span class="o">=</span><span class="n">geom_type</span><span class="p">,</span>
+                <span class="n">factory_name</span><span class="o">=</span><span class="n">factory_name</span>
+                <span class="p">)</span>
+        <span class="n">wrapped_source</span> <span class="o">=</span> <span class="n">header</span> <span class="o">+</span> <span class="s2">&quot;{</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">body</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">wrapped_source</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="n">integral_tensor_indices</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Benjamin Pachev, James Trotter.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

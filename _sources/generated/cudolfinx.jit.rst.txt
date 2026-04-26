@@ -1,0 +1,13 @@
+﻿cudolfinx.jit
+=============
+
+.. automodule:: cudolfinx.jit
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_tabulate_tensor_sources
+      get_wrapped_tabulate_tensors
+   

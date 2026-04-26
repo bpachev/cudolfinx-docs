@@ -1,0 +1,334 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cudolfinx.assemble &mdash; cuDOLFINx 0.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=82662543"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="cudolfinx.form" href="cudolfinx.form.html" />
+    <link rel="prev" title="API reference" href="../api.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            cuDOLFINx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#python">Python</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../api.html#public-user-interface">Public user interface</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">cudolfinx.assemble</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.form.html">cudolfinx.form</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.mesh.html">cudolfinx.mesh</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.la.html">cudolfinx.la</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.jit.html">cudolfinx.jit</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.context.html">cudolfinx.context</a></li>
+<li class="toctree-l4"><a class="reference internal" href="cudolfinx.bcs.html">cudolfinx.bcs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cuDOLFINx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../api.html">API reference</a></li>
+      <li class="breadcrumb-item active">cudolfinx.assemble</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/generated/cudolfinx.assemble.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cudolfinx.assemble">
+<span id="cudolfinx-assemble"></span><h1>cudolfinx.assemble<a class="headerlink" href="#module-cudolfinx.assemble" title="Link to this heading"></a></h1>
+<p>GPU-accelerated assembly routines.</p>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cudolfinx.assemble.create_petsc_cuda_vector" title="cudolfinx.assemble.create_petsc_cuda_vector"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_petsc_cuda_vector</span></code></a>(L)</p></td>
+<td><p>Create PETSc Vector on device.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Classes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cudolfinx.assemble.CUDAAssembler" title="cudolfinx.assemble.CUDAAssembler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUDAAssembler</span></code></a>()</p></td>
+<td><p>Class for assembly on the GPU.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">cudolfinx.assemble.</span></span><span class="sig-name descname"><span class="pre">CUDAAssembler</span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for assembly on the GPU.</p>
+<p>Initialize the assembler.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.apply_lifting">
+<span class="sig-name descname"><span class="pre">apply_lifting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">CUDAForm</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">DirichletBC</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="cudolfinx.bcs.html#cudolfinx.bcs.CUDADirichletBC" title="cudolfinx.bcs.CUDADirichletBC"><span class="pre">CUDADirichletBC</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Function</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.apply_lifting"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.apply_lifting" title="Link to this definition"></a></dt>
+<dd><p>GPU equivalent of apply_lifting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>b</strong> – CUDAVector to modify</p></li>
+<li><p><strong>a</strong> – list of forms to lift</p></li>
+<li><p><strong>bcs</strong> – list of boundary condition lists</p></li>
+<li><p><strong>x0</strong> – optional list of shift vectors for lifting</p></li>
+<li><p><strong>scale</strong> – scale of lifting</p></li>
+<li><p><strong>coeffs</strong> – coefficients to (re-)pack</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.apply_lifting_block">
+<span class="sig-name descname"><span class="pre">apply_lifting_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BlockCUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">DirichletBC</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">set_bcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.apply_lifting_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.apply_lifting_block" title="Link to this definition"></a></dt>
+<dd><p>Apply lifting with a single block form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.assemble_matrix">
+<span class="sig-name descname"><span class="pre">assemble_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAMatrix</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">DirichletBC</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="cudolfinx.bcs.html#cudolfinx.bcs.CUDADirichletBC" title="cudolfinx.bcs.CUDADirichletBC"><span class="pre">CUDADirichletBC</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diagonal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.assemble_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.assemble_matrix" title="Link to this definition"></a></dt>
+<dd><p>Assemble bilinear form into a matrix on the GPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> – The bilinear form to assemble.</p></li>
+<li><p><strong>mat</strong> – Matrix in which to store assembled values.</p></li>
+<li><p><strong>bcs</strong> – Boundary conditions that affect the assembled matrix.
+Degrees-of-freedom constrained by a boundary condition will
+have their rows/columns zeroed and the value <code class="docutils literal notranslate"><span class="pre">diagonal</span></code>
+set on on the matrix diagonal.</p></li>
+<li><p><strong>diagonal</strong> – Value to set on the diagonal.</p></li>
+<li><p><strong>constants</strong> – Constants that appear in the form. If not provided,
+any required coefficients will be computed.</p></li>
+<li><p><strong>coeffs</strong> – Optional list of form coefficients to repack.
+If not specified, all will be repacked.
+If an empty list is passed, no repacking will be performed.</p></li>
+<li><p><strong>zero</strong> – Whether to zero the matrix prior to assembly</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matrix representation of the bilinear form <code class="docutils literal notranslate"><span class="pre">a</span></code>.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The returned matrix is not finalised, i.e. ghost values are not
+accumulated.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.assemble_matrix_block">
+<span class="sig-name descname"><span class="pre">assemble_matrix_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BlockCUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAMatrix" title="cudolfinx.la.CUDAMatrix"><span class="pre">CUDAMatrix</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.assemble_matrix_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.assemble_matrix_block" title="Link to this definition"></a></dt>
+<dd><p>Assemble block form into a matrix on the GPU.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.assemble_scalar">
+<span class="sig-name descname"><span class="pre">assemble_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.assemble_scalar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.assemble_scalar" title="Link to this definition"></a></dt>
+<dd><p>Assemble scalar integral on GPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>b</strong> – the functional to use for assembly</p></li>
+<li><p><strong>constants</strong> – Form constants</p></li>
+<li><p><strong>coeffs</strong> – Optional list of form coefficients to repack.
+If not specified, all will be repacked.
+If an empty list is passed, no repacking will be performed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.assemble_vector">
+<span class="sig-name descname"><span class="pre">assemble_vector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.assemble_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.assemble_vector" title="Link to this definition"></a></dt>
+<dd><p>Assemble linear form into vector on GPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>b</strong> – the linear form to use for assembly</p></li>
+<li><p><strong>vec</strong> – the vector to assemble into. Created if it doesn’t exist</p></li>
+<li><p><strong>constants</strong> – Form constants</p></li>
+<li><p><strong>coeffs</strong> – Optional list of form coefficients to repack.
+If not specified, all will be repacked.
+If an empty list is passed, no repacking will be performed.</p></li>
+<li><p><strong>zero</strong> – Whether to zero vector entries before assembly (defaults to true)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.assemble_vector_block">
+<span class="sig-name descname"><span class="pre">assemble_vector_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BlockCUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constants</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.assemble_vector_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.assemble_vector_block" title="Link to this definition"></a></dt>
+<dd><p>Assemble block linear form into vector on GPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>b</strong> – the block linear form to use for assembly</p></li>
+<li><p><strong>vec</strong> – the vector to assemble into. Created if not provided</p></li>
+<li><p><strong>constants</strong> – List of constants for each sub form</p></li>
+<li><p><strong>coeffs</strong> – <dl class="simple">
+<dt>Optional list of form coefficients to repack.</dt><dd><p>If not specified, all will be repacked.</p>
+</dd>
+</dl>
+<p>If an empty list is passed, no repacking will be performed.</p>
+</p></li>
+<li><p><strong>zero</strong> – Whether to zero vector entries before assembly (defaults to true)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.create_matrix">
+<span class="sig-name descname"><span class="pre">create_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAMatrix" title="cudolfinx.la.CUDAMatrix"><span class="pre">CUDAMatrix</span></a></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.create_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.create_matrix" title="Link to this definition"></a></dt>
+<dd><p>Create a CUDAMatrix from a given form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.create_matrix_block">
+<span class="sig-name descname"><span class="pre">create_matrix_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BlockCUDAForm</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAMatrix" title="cudolfinx.la.CUDAMatrix"><span class="pre">CUDAMatrix</span></a></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.create_matrix_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.create_matrix_block" title="Link to this definition"></a></dt>
+<dd><p>Create a block matrix from a block form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.create_vector">
+<span class="sig-name descname"><span class="pre">create_vector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.create_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.create_vector" title="Link to this definition"></a></dt>
+<dd><p>Create a CUDAVector from a given form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.create_vector_block">
+<span class="sig-name descname"><span class="pre">create_vector_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">BlockCUDAForm</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.create_vector_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.create_vector_block" title="Link to this definition"></a></dt>
+<dd><p>Create a CUDAVector from a given form.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.pack_bcs">
+<span class="sig-name descname"><span class="pre">pack_bcs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">DirichletBC</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="cudolfinx.bcs.html#cudolfinx.bcs.CUDADirichletBC" title="cudolfinx.bcs.CUDADirichletBC"><span class="pre">CUDADirichletBC</span></a></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.pack_bcs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.pack_bcs" title="Link to this definition"></a></dt>
+<dd><p>Pack boundary conditions into a single object for use in assembly.</p>
+<p>The returned object is of type CUDADirichletBC and can be used in place of a list of
+regular DirichletBCs. This is more efficient when performing multiple operations
+with the same list of boundary conditions, or when
+boundary condition values need to change over time.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.pack_coefficients">
+<span class="sig-name descname"><span class="pre">pack_coefficients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CUDAForm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coefficients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Function</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.pack_coefficients"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.pack_coefficients" title="Link to this definition"></a></dt>
+<dd><p>Pack coefficients on device.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cudolfinx.assemble.CUDAAssembler.set_bc">
+<span class="sig-name descname"><span class="pre">set_bc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">DirichletBC</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="cudolfinx.bcs.html#cudolfinx.bcs.CUDADirichletBC" title="cudolfinx.bcs.CUDADirichletBC"><span class="pre">CUDADirichletBC</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">FunctionSpace</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="cudolfinx.la.html#cudolfinx.la.CUDAVector" title="cudolfinx.la.CUDAVector"><span class="pre">CUDAVector</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#CUDAAssembler.set_bc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.CUDAAssembler.set_bc" title="Link to this definition"></a></dt>
+<dd><p>Set boundary conditions on device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>b</strong> – vector to modify</p></li>
+<li><p><strong>bcs</strong> – collection of bcs</p></li>
+<li><p><strong>V</strong> – FunctionSpace to which bcs apply</p></li>
+<li><p><strong>x0</strong> – optional shift vector</p></li>
+<li><p><strong>scale</strong> – scaling factor</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cudolfinx.assemble.create_petsc_cuda_vector">
+<span class="sig-prename descclassname"><span class="pre">cudolfinx.assemble.</span></span><span class="sig-name descname"><span class="pre">create_petsc_cuda_vector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Form</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Vec</span></span></span><a class="reference internal" href="../_modules/cudolfinx/assemble.html#create_petsc_cuda_vector"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cudolfinx.assemble.create_petsc_cuda_vector" title="Link to this definition"></a></dt>
+<dd><p>Create PETSc Vector on device.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../api.html" class="btn btn-neutral float-left" title="API reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cudolfinx.form.html" class="btn btn-neutral float-right" title="cudolfinx.form" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Benjamin Pachev, James Trotter.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

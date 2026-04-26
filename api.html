@@ -1,0 +1,155 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API reference &mdash; cuDOLFINx 0.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=82662543"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cudolfinx.assemble" href="generated/cudolfinx.assemble.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cuDOLFINx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#python">Python</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#public-user-interface">Public user interface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.assemble.html">cudolfinx.assemble</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.form.html">cudolfinx.form</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.mesh.html">cudolfinx.mesh</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.la.html">cudolfinx.la</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.jit.html">cudolfinx.jit</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.context.html">cudolfinx.context</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/cudolfinx.bcs.html">cudolfinx.bcs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cuDOLFINx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<section id="python">
+<h2>Python<a class="headerlink" href="#python" title="Link to this heading"></a></h2>
+<section id="public-user-interface">
+<h3>Public user interface<a class="headerlink" href="#public-user-interface" title="Link to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/cudolfinx.assemble.html#module-cudolfinx.assemble" title="cudolfinx.assemble"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.assemble</span></code></a></p></td>
+<td><p>GPU-accelerated assembly routines.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/cudolfinx.form.html#cudolfinx.form" title="cudolfinx.form"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.form</span></code></a>(form[, restriction, ...])</p></td>
+<td><p>Create a CUDAForm from a ufl form.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/cudolfinx.mesh.html#module-cudolfinx.mesh" title="cudolfinx.mesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.mesh</span></code></a></p></td>
+<td><p>Functions to create distributed meshes on GPUs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/cudolfinx.la.html#module-cudolfinx.la" title="cudolfinx.la"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.la</span></code></a></p></td>
+<td><p>Wrapper classes for linear algebra objects on the GPU.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/cudolfinx.jit.html#module-cudolfinx.jit" title="cudolfinx.jit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.jit</span></code></a></p></td>
+<td><p>Routines for manipulating generated FFCX code.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/cudolfinx.context.html#module-cudolfinx.context" title="cudolfinx.context"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.context</span></code></a></p></td>
+<td><p>CUDA Context management.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/cudolfinx.bcs.html#module-cudolfinx.bcs" title="cudolfinx.bcs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cudolfinx.bcs</span></code></a></p></td>
+<td><p>Boundary conditions.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="generated/cudolfinx.assemble.html" class="btn btn-neutral float-right" title="cudolfinx.assemble" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Benjamin Pachev, James Trotter.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

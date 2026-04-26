@@ -1,0 +1,18 @@
+﻿cudolfinx.assemble
+==================
+
+.. automodule:: cudolfinx.assemble
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      create_petsc_cuda_vector
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      CUDAAssembler
+   

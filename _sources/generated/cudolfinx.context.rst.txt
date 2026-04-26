@@ -1,0 +1,13 @@
+﻿cudolfinx.context
+=================
+
+.. automodule:: cudolfinx.context
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_cuda_context
+      get_device
+   

@@ -1,0 +1,413 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cudolfinx.form &mdash; cuDOLFINx 0.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=82662543"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            cuDOLFINx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">cuDOLFINx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cudolfinx.form</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cudolfinx.form</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (C) 2024-2026 Benjamin Pachev</span>
+<span class="c1">#</span>
+<span class="c1"># This file is part of cuDOLFINX</span>
+<span class="c1">#</span>
+<span class="c1"># SPDX-License-Identifier:    LGPL-3.0-or-later</span>
+<span class="sd">&quot;&quot;&quot;Form compilation and wrapping.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">collections</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">ufl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">cpp</span> <span class="k">as</span> <span class="n">_cucpp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">jit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cudolfinx.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cuda_context</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">cpp</span> <span class="k">as</span> <span class="n">_cpp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">fem</span> <span class="k">as</span> <span class="n">fe</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dolfinx.jit</span><span class="w"> </span><span class="kn">import</span> <span class="n">mpi_jit_decorator</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;BlockCUDAForm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CUDAForm&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;form&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">DEFAULT_CUDA_JIT_ARGS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;max_threads_per_block&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="s2">&quot;min_blocks_per_multiprocessor&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;cachedir&quot;</span><span class="p">:</span>  <span class="nb">str</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;XDG_CACHE_HOME&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;.cache&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;fenics&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CUDAForm</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;CUDA wrapper class for a dolfinx.fem.Form.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="n">fe</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="n">jit_args</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the wrapper.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span> <span class="o">=</span> <span class="n">get_cuda_context</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_mesh</span> <span class="o">=</span> <span class="n">_create_mesh_on_device</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dolfinx_form</span> <span class="o">=</span> <span class="n">form</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wrapped_tabulate_tensors</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">_integral_tensor_indices</span><span class="p">)</span> <span class="o">=</span> <span class="n">jit</span><span class="o">.</span><span class="n">get_wrapped_tabulate_tensors</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="n">ufcx_form_addr</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">ffi</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span>
+            <span class="s2">&quot;uintptr_t&quot;</span><span class="p">,</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">ffi</span><span class="o">.</span><span class="n">addressof</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">ufcx_form</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">cpp_form</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">_cpp_object</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cpp_form</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">Form_float32</span><span class="p">:</span>
+            <span class="n">form_cls</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAForm_float32</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">cpp_form</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">Form_float64</span><span class="p">:</span>
+            <span class="n">form_cls</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAForm_float64</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot instantiate CUDAForm for Form of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">cpp_form</span><span class="p">)</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">)</span>
+
+        <span class="n">_tabulate_tensor_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">_tabulate_tensor_sources</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">source</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrapped_tabulate_tensors</span><span class="p">:</span>
+            <span class="n">_tabulate_tensor_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">_tabulate_tensor_sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_form</span> <span class="o">=</span> <span class="n">form_cls</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span>
+                <span class="n">cpp_form</span><span class="p">,</span>
+                <span class="n">ufcx_form_addr</span><span class="p">,</span>
+                <span class="n">_tabulate_tensor_names</span><span class="p">,</span>
+                <span class="n">_tabulate_tensor_sources</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_integral_tensor_indices</span>
+        <span class="p">)</span>
+
+        <span class="n">_jit_args</span> <span class="o">=</span> <span class="n">DEFAULT_CUDA_JIT_ARGS</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">_jit_args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">jit_args</span><span class="p">)</span>
+
+        <span class="nd">@mpi_jit_decorator</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">do_compilation</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_form</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">,</span> <span class="o">**</span><span class="n">_jit_args</span><span class="p">)</span>
+
+        <span class="n">do_compilation</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy host-side coefficients and constants to the device.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_form</span><span class="o">.</span><span class="n">to_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cuda_form</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the underlying cpp CUDAForm.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_form</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cuda_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the underlying cpp CUDAMesh.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cuda_mesh</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dolfinx_form</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the underlying Dolfinx form.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dolfinx_form</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">function_spaces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a list of FunctionSpaces corresponding to the form.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dolfinx_form</span><span class="o">.</span><span class="n">function_spaces</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BlockCUDAForm</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data structure containing multiple CUDA forms to be used in block assembly.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">forms</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">CUDAForm</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">CUDAForm</span><span class="p">]]],</span>
+        <span class="n">restrictions</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span>
+            <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span>
+                <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">]],</span>
+                <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">]]]</span>
+        <span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the data structure.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span> <span class="o">=</span> <span class="n">forms</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span> <span class="o">=</span> <span class="n">restrictions</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">forms</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must provide at least one form!&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">forms</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="n">CUDAForm</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init_vector</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init_matrix</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_restriction_offsets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">forms</span><span class="p">,</span> <span class="n">restrictions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of offsets and restriction indices.&quot;&quot;&quot;</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ghost_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ghost_offsets</span> <span class="o">=</span> <span class="p">[</span><span class="n">ghost_offset</span><span class="p">]</span>
+        <span class="n">offsets</span> <span class="o">=</span> <span class="p">[</span><span class="n">offset</span><span class="p">]</span>
+        <span class="n">restriction_inds_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">local_sizes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">form</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">forms</span><span class="p">):</span>
+            <span class="n">dofmap</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">dofmap</span>
+            <span class="n">local_size</span> <span class="o">=</span> <span class="n">dofmap</span><span class="o">.</span><span class="n">index_map</span><span class="o">.</span><span class="n">size_local</span>
+            <span class="k">if</span> <span class="n">restrictions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">restriction_inds</span> <span class="o">=</span> <span class="n">restrictions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">local_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">restriction_inds</span><span class="p">[</span><span class="n">restriction_inds</span> <span class="o">&lt;</span> <span class="n">local_size</span><span class="p">])</span>
+                <span class="n">num_ghosts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">restriction_inds</span><span class="p">)</span> <span class="o">-</span> <span class="n">local_size</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">num_ghosts</span> <span class="o">=</span> <span class="n">dofmap</span><span class="o">.</span><span class="n">index_map</span><span class="o">.</span><span class="n">num_ghosts</span>
+                <span class="n">restriction_inds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">local_size</span><span class="o">+</span><span class="n">num_ghosts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">local_size</span> <span class="o">*</span> <span class="n">dofmap</span><span class="o">.</span><span class="n">index_map_bs</span>
+            <span class="n">ghost_offset</span> <span class="o">+=</span> <span class="n">num_ghosts</span> <span class="o">*</span> <span class="n">dofmap</span><span class="o">.</span><span class="n">index_map_bs</span>
+            <span class="n">offsets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+            <span class="n">ghost_offsets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ghost_offset</span><span class="p">)</span>
+            <span class="n">local_sizes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">local_size</span><span class="o">*</span><span class="n">dofmap</span><span class="o">.</span><span class="n">index_map_bs</span><span class="p">)</span>
+            <span class="n">restriction_inds_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restriction_inds</span><span class="p">)</span>
+        <span class="c1"># create offsets that can be directly added to the local index of the ghost</span>
+        <span class="c1"># hence the need to subtract out the local size as the CUDADofMap doesn&#39;t know how many</span>
+        <span class="c1"># restricted dofs are acutally local</span>
+        <span class="c1"># TODO just reimplement RestrictedDofMap from multiphenicsx</span>
+        <span class="n">ghost_offsets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">offsets</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">ghost_offset</span> <span class="o">-</span> <span class="n">local_size</span>
+            <span class="k">for</span> <span class="n">ghost_offset</span><span class="p">,</span><span class="n">local_size</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ghost_offsets</span><span class="p">,</span> <span class="n">local_sizes</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">restriction_inds_list</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">ghost_offsets</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize vector form.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arity</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># don&#39;t need ghost offsets for vector assembly</span>
+        <span class="n">restriction_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">,</span> <span class="n">ghost_offsets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_restriction_offsets</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_restriction_offsets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">restriction_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">,</span> <span class="n">ghost_offsets</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_function_spaces</span> <span class="o">=</span> <span class="p">[[</span><span class="n">form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">]]</span>
+
+        <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">ghost_offset</span><span class="p">,</span> <span class="n">restriction_inds</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">,</span> <span class="n">ghost_offsets</span><span class="p">,</span> <span class="n">restriction_inds_list</span>
+        <span class="p">):</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">cuda_form</span><span class="o">.</span><span class="n">set_restriction</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">offset</span><span class="p">],</span> <span class="p">[</span><span class="n">ghost_offset</span><span class="p">],</span> <span class="p">[</span><span class="n">restriction_inds</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dolfinx_form</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">comm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_global_size</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize matrix form.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arity</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">row_forms</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">]</span>
+        <span class="n">col_forms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">row_restrictions</span><span class="p">,</span> <span class="n">row_offsets</span><span class="p">,</span> <span class="n">row_ghost_offsets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_restriction_offsets</span><span class="p">(</span>
+            <span class="n">row_forms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+        <span class="n">col_restrictions</span><span class="p">,</span> <span class="n">col_offsets</span><span class="p">,</span> <span class="n">col_ghost_offsets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_restriction_offsets</span><span class="p">(</span>
+            <span class="n">col_forms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restrictions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">idx</span><span class="o">=</span><span class="mi">1</span> <span class="c1"># need to extract the second FunctionSpace, not the first</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_restriction_offsets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">row_restrictions</span><span class="p">,</span> <span class="n">row_offsets</span><span class="p">,</span> <span class="n">row_ghost_offsets</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">col_restrictions</span><span class="p">,</span> <span class="n">col_offsets</span><span class="p">,</span> <span class="n">col_ghost_offsets</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_function_spaces</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="n">form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">row_forms</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">form</span><span class="o">.</span><span class="n">function_spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">col_forms</span><span class="p">]</span>
+        <span class="p">]</span>
+
+        <span class="c1"># restrict forms appropriately</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">form</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+                <span class="n">form</span><span class="o">.</span><span class="n">cuda_form</span><span class="o">.</span><span class="n">set_restriction</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">row_offsets</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">col_offsets</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span>
+                        <span class="p">[</span><span class="n">row_ghost_offsets</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">col_ghost_offsets</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span>
+                        <span class="p">[</span><span class="n">row_restrictions</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">col_restrictions</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
+                        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_block_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bcs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create blocked CUDADirichletBC objects usable with this form.&quot;&quot;&quot;</span>
+        <span class="n">blocked_bcs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">V</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">FunctionSpace_float32</span><span class="p">:</span>
+            <span class="n">bc_cls</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDADirichletBC_float32</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">V</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">FunctionSpace_float64</span><span class="p">:</span>
+            <span class="n">bc_cls</span> <span class="o">=</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDADirichletBC_float64</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No corresponding CUDADirichletBC class for cpp&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;FunctionSpace object of type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">V</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+        <span class="n">_bcs</span> <span class="o">=</span> <span class="p">[</span><span class="n">bc</span><span class="o">.</span><span class="n">_cpp_object</span> <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="n">bcs</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arity</span><span class="p">):</span>
+            <span class="n">restrictions</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">ghost_offsets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restriction_offsets</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">_bc</span> <span class="o">=</span> <span class="n">bc_cls</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_function_spaces</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+                    <span class="n">_bcs</span><span class="p">,</span>
+                    <span class="n">offsets</span><span class="p">,</span>
+                    <span class="n">ghost_offsets</span><span class="p">,</span>
+                    <span class="n">restrictions</span><span class="p">)</span>
+            <span class="n">blocked_bcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_bc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">blocked_bcs</span>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the list of forms.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dolfinx_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of underlying dolfinx forms.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">dolfinx_form</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forms</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">offsets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of offsets.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return size of local vector.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offsets</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">global_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return size of global vector.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_size</span>
+
+<div class="viewcode-block" id="form">
+<a class="viewcode-back" href="../../generated/cudolfinx.form.html#cudolfinx.form">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">form</span><span class="p">(</span>
+    <span class="n">form</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">ufl</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">ufl</span><span class="o">.</span><span class="n">Form</span><span class="p">]],</span>
+    <span class="n">restriction</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cuda_jit_args</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a CUDAForm from a ufl form.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_form</span><span class="p">(</span><span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursively convert ufl.Forms to CUDAForm.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">ufl</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+            <span class="n">dolfinx_form</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">form</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">CUDAForm</span><span class="p">(</span><span class="n">dolfinx_form</span><span class="p">,</span> <span class="n">jit_args</span><span class="o">=</span><span class="n">cuda_jit_args</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sub_form</span><span class="p">:</span> <span class="n">_create_form</span><span class="p">(</span><span class="n">sub_form</span><span class="p">),</span> <span class="n">form</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected form to be a ufl.Form or an iterable, got type &#39;{type(form)}&#39;!&quot;</span>
+            <span class="p">)</span>
+
+    <span class="n">cuda_form</span> <span class="o">=</span> <span class="n">_create_form</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+    <span class="c1"># TODO: properly handle restriction for a single form</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">BlockCUDAForm</span><span class="p">(</span><span class="n">cuda_form</span><span class="p">,</span> <span class="n">restriction</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cuda_form</span></div>
+
+
+<span class="c1"># Cache this so we don&#39;t create multiple copies of the same CUDAMesh</span>
+<span class="nd">@functools</span><span class="o">.</span><span class="n">cache</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_mesh_on_device</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">_cpp</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">Mesh_float32</span><span class="p">,</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">Mesh_float64</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create device-side mesh data.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">Mesh_float32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAMesh_float32</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">)</span> <span class="ow">is</span> <span class="n">_cpp</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">Mesh_float64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_cucpp</span><span class="o">.</span><span class="n">fem</span><span class="o">.</span><span class="n">CUDAMesh_float64</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot instantiate CUDAMesh for Mesh of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">cpp_mesh</span><span class="p">)</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Benjamin Pachev, James Trotter.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
